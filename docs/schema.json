@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pm-mvp.local/schema.json",
+  "title": "PM MVP Database Schema",
+  "description": "Форма строк каждой таблицы SQLite-БД проекта. Контракт для реализации в Части 6 (SQLModel) и для формата ответа GET /api/board. Целочисленные первичные ключи в БД сериализуются наружу как строки, чтобы совпасть с существующей TypeScript-моделью фронтенда (frontend/src/lib/kanban.ts).",
+  "$defs": {
+    "User": {
+      "type": "object",
+      "description": "Пользователь системы. В MVP единственная запись создаётся seed-ом при первом старте; аутентификация сверяет с hardcoded config (backend/app/config.py), а не с password_hash. Multi-user-готовность: username UNIQUE, password_hash nullable — заполняется при переходе на реальный auth.",
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "username": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "password_hash": {
+          "type": ["string", "null"],
+          "description": "NULL в MVP. Заполняется при добавлении реальной регистрации/логина."
+        },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "username", "created_at"],
+      "additionalProperties": false
+    },
+    "Board": {
+      "type": "object",
+      "description": "Доска канбан. В MVP ровно одна на пользователя; связь User 1—N Board в БД оставлена для будущего расширения.",
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "user_id": { "type": "integer", "minimum": 1, "description": "FK -> User.id" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 128, "default": "My Board" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "user_id", "title", "created_at"],
+      "additionalProperties": false
+    },
+    "Column": {
+      "type": "object",
+      "description": "Колонка доски. Упорядочены по position ASC. Seed создаёт 5 колонок: Backlog, Discovery, In Progress, Review, Done с position 1000, 2000, 3000, 4000, 5000.",
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "board_id": { "type": "integer", "minimum": 1, "description": "FK -> Board.id" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "position": {
+          "type": "integer",
+          "description": "Порядок в доске. Шаг 1000 позволяет вставки между без ремапа всей колонки."
+        },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "board_id", "title", "position", "created_at", "updated_at"],
+      "additionalProperties": false
+    },
+    "Card": {
+      "type": "object",
+      "description": "Карточка внутри колонки. details хранится как plain text (не Markdown в MVP). Упорядочены по position ASC.",
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "column_id": { "type": "integer", "minimum": 1, "description": "FK -> Column.id" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "details": {
+          "type": "string",
+          "default": "",
+          "description": "Plain text. Никакого рендеринга Markdown в MVP."
+        },
+        "position": {
+          "type": "integer",
+          "description": "Порядок внутри колонки. Шаг 1000."
+        },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "column_id", "title", "details", "position", "created_at", "updated_at"],
+      "additionalProperties": false
+    },
+    "ChatMessage": {
+      "type": "object",
+      "description": "Сообщение чата с ИИ. Используется в Части 9. История загружается по user_id, сортируется по created_at ASC.",
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "user_id": { "type": "integer", "minimum": 1, "description": "FK -> User.id" },
+        "role": {
+          "type": "string",
+          "enum": ["user", "assistant"],
+          "description": "Валидируется Pydantic Enum. В SQLite хранится как VARCHAR (SQLite не enforce-ит enum)."
+        },
+        "content": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "user_id", "role", "content", "created_at"],
+      "additionalProperties": false
+    },
+    "BoardResponse": {
+      "type": "object",
+      "description": "Формат ответа GET /api/board (Часть 6). Совпадает 1-в-1 с TypeScript-типом BoardData во frontend/src/lib/kanban.ts:13-16. Целочисленные id из БД сериализуются как строки: str(Column.id), str(Card.id) — фронт уже работает со строковыми id, менять его не потребуется.",
+      "properties": {
+        "columns": {
+          "type": "array",
+          "description": "Массив колонок в порядке position ASC.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "description": "str(Column.id)" },
+              "title": { "type": "string" },
+              "cardIds": {
+                "type": "array",
+                "description": "Массив id карточек в порядке position ASC.",
+                "items": { "type": "string", "description": "str(Card.id)" }
+              }
+            },
+            "required": ["id", "title", "cardIds"],
+            "additionalProperties": false
+          }
+        },
+        "cards": {
+          "type": "object",
+          "description": "Map: str(Card.id) -> Card. Ключ равен полю id внутри значения.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "details": { "type": "string" }
+            },
+            "required": ["id", "title", "details"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["columns", "cards"],
+      "additionalProperties": false
+    }
+  }
+}
