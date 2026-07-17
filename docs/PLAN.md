@@ -241,17 +241,17 @@
 **Цель:** отправлять ИИ JSON канбана + вопрос пользователя + историю переписки. Получать структурированный ответ (текст пользователю + опциональный список обновлений канбана). ИИ может создавать/редактировать/перемещать/удалять карточки. Тщательные тесты.
 
 **Подэтапы:**
-- [ ] Модель `ChatMessage` (SQLModel): `id, user_id, role, content, created_at`
-- [ ] Pydantic-схема `AiResponse`: `{reply: str, actions: list[BoardAction]}`
-- [ ] Варианты `BoardAction` (discriminated union): `create_card`, `edit_card`, `move_card`, `delete_card`, `rename_column`
-- [ ] Использовать OpenAI Structured Outputs (`response_format=AiResponse`) для гарантии схемы
-- [ ] `POST /api/chat` — принимает `{message: str}`, автоматически подгружает историю пользователя из БД, возвращает `AiResponse`
-- [ ] Внутри: загрузить текущий board -> составить system prompt с board JSON и правилами -> вызвать OpenAI -> применить `actions` к БД в одной транзакции -> сохранить user- и assistant-сообщения -> вернуть `AiResponse`
-- [ ] `GET /api/chat/history` -> история сообщений пользователя
-- [ ] `DELETE /api/chat/history` -> очистить историю
-- [ ] Логировать все действия ИИ (Python logging)
-- [ ] Unit-тесты на каждый вариант `BoardAction` (мок ответа OpenAI, проверка изменений в БД)
-- [ ] Integration-тест (live): "создай карту 'купить молоко' в Backlog" -> карта появляется в БД
+- [x] Модель `ChatMessage` (SQLModel): `id, user_id, role, content, created_at`
+- [x] Pydantic-схема `AiResponse`: `{reply: str, actions: list[BoardAction]}`
+- [x] Варианты `BoardAction` (union по `Literal["type"]`, без pydantic-`discriminator=` — OpenAI strict запрещает `oneOf`): `create_card`, `edit_card`, `move_card`, `delete_card`, `rename_column`
+- [x] Использовать OpenAI Structured Outputs (`response_format=AiResponse`) для гарантии схемы
+- [x] `POST /api/chat` — принимает `{message: str}`, автоматически подгружает историю пользователя из БД, возвращает `AiResponse`
+- [x] Внутри: загрузить текущий board -> составить system prompt с board JSON и правилами -> вызвать OpenAI -> применить `actions` к БД в одной транзакции -> сохранить user- и assistant-сообщения -> вернуть `AiResponse`
+- [x] `GET /api/chat/history` -> история сообщений пользователя
+- [x] `DELETE /api/chat/history` -> очистить историю
+- [x] Логировать все действия ИИ (Python logging)
+- [x] Unit-тесты на каждый вариант `BoardAction` (мок ответа OpenAI, проверка изменений в БД)
+- [x] Integration-тест (live): "создай карту 'купить молоко' в Backlog" -> карта появляется в БД
 
 **Тесты:**
 - Unit (mocked): каждый `action_type` корректно применяется к БД

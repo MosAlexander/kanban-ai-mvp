@@ -1,4 +1,5 @@
 import logging
+from typing import TypeVar
 
 from fastapi import HTTPException, status
 from openai import (
@@ -8,10 +9,13 @@ from openai import (
     AuthenticationError,
     RateLimitError,
 )
+from pydantic import BaseModel
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T", bound=BaseModel)
 
 _client: AsyncOpenAI | None = None
 
@@ -47,3 +51,34 @@ async def call_openai(prompt: str) -> str:
             detail="Empty AI response",
         )
     return answer
+
+
+async def call_openai_parse(
+    messages: list[dict], response_format: type[T]
+) -> T:
+    try:
+        response = await _get_client().chat.completions.parse(
+            model=_model_name(),
+            messages=messages,
+            response_format=response_format,
+        )
+    except (AuthenticationError, RateLimitError, APIConnectionError, APIError) as exc:
+        logger.exception("OpenAI structured request failed")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="AI service error",
+        ) from exc
+
+    message = response.choices[0].message
+    if message.refusal:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"AI refused: {message.refusal}",
+        )
+    parsed = message.parsed
+    if parsed is None:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Empty AI response",
+        )
+    return parsed

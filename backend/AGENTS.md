@@ -17,10 +17,12 @@
 - `app/auth.py` — dependency `current_user(request) -> int | 401`
 - `app/models.py` — SQLModel-таблицы: `User`, `Board`, `Column`, `Card`, `ChatMessage`
 - `app/db.py` — async engine, `async_session_maker`, `get_session` dep, `seed_board`, `init_db`
-- `app/ai.py` — ленивый `AsyncOpenAI` клиент, `call_openai(prompt) -> str` (30s timeout, префикс `openai/` в `settings.model` срезается)
+- `app/ai.py` — ленивый `AsyncOpenAI` клиент, `call_openai(prompt) -> str` (30s timeout, префикс `openai/` в `settings.model` срезается) + `call_openai_parse(messages, response_format)` для structured outputs
+- `app/chat.py` — Pydantic-схемы `AiResponse` + `BoardAction` (union, `Literal`-дискриминатор в поле `type`, без pydantic `discriminator=` — OpenAI strict запрещает `oneOf`), `handle_chat` (board snapshot + история 20 → OpenAI parse → apply actions в try/except → save user+assistant messages → commit)
 - `app/routers/session.py` — GET/POST/DELETE `/api/session`
 - `app/routers/board.py` — все CRUD-роуты доски
 - `app/routers/ai.py` — POST `/api/ai/ping`
+- `app/routers/chat.py` — POST `/api/chat`, GET/DELETE `/api/chat/history`
 - `tests/conftest.py` — autouse fixture `isolate_db` (tmp SQLite для каждого теста), `client`, `auth_client`, регистрация опции `--live`
 - `tests/` — pytest-тесты
 
@@ -41,6 +43,11 @@
   - `PATCH /api/board/cards/{card_id}/position` `{column_id, position}` -> 204. `position` — 0-based индекс в целевой колонке. Позиции целевой колонки перенумеровываются шагом 1000.
 - **ИИ (Часть 8, требуют cookie-сессии):**
   - `POST /api/ai/ping` `{prompt}` -> `{answer}`. Прямой вызов OpenAI (`gpt-5-mini`). Ошибки OpenAI (auth/rate limit/timeout/api) -> 502 `AI service error`. Пустой ответ модели -> 502 `Empty AI response`.
+- **Чат с ИИ (Часть 9, требуют cookie-сессии):**
+  - `POST /api/chat` `{message}` -> `AiResponse {reply, actions[]}`. Внутри: собирает snapshot доски + подтягивает историю (последние 20 сообщений), шлёт OpenAI Structured Outputs (`response_format=AiResponse`), применяет `actions` к БД, сохраняет пару user/assistant в `chat_messages`. Ошибка применения action (несуществующий id и т.п.) -> rollback изменений доски, в `reply` дописывается `[Действия не применены: <detail>]`, `actions=[]`, HTTP 200. Каждое применённое действие логируется `logger.info`.
+  - `GET /api/chat/history` -> `[{role, content, created_at}, ...]` (в хронологическом порядке).
+  - `DELETE /api/chat/history` -> 204, очищает историю текущего пользователя.
+  - Варианты `BoardAction`: `create_card`, `edit_card`, `move_card`, `delete_card`, `rename_column` (union без pydantic `discriminator=` — OpenAI strict-mode отклоняет `oneOf`, использует `anyOf` + `Literal["<type>"]` для разведения).
 
 ## БД и seed
 
@@ -66,9 +73,9 @@ uv run uvicorn app.main:app --reload
 
 ## Тесты
 
-Внутри контейнера: `docker compose exec pm uv run --no-sync pytest -v` (40 тестов + 1 live-тест, пропускается без `--live`).
+Внутри контейнера: `docker compose exec pm uv run --no-sync pytest -v` (59 тестов + 2 live-теста, пропускаются без `--live`).
 
-Live-тест OpenAI: `docker compose exec pm uv run --no-sync pytest -v --live -k live`. Требует валидный `OPENAI_API_KEY` в `.env`.
+Live-тесты OpenAI: `docker compose exec pm uv run --no-sync pytest -v --live -k live`. Требуют валидный `OPENAI_API_KEY` в `.env`. Покрывают `POST /api/ai/ping` ("2+2" -> "4") и `POST /api/chat` (ИИ создаёт карту "молоко" в Backlog).
 
 ## Запуск локально (без Docker)
 
