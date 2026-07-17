@@ -10,7 +10,7 @@ type KanbanCardProps = {
 
 export const KanbanCard = ({ card, onDelete }: KanbanCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: card.id });
+    useSortable({ id: `card-${card.id}` });
 
   const style = {
     transform: CSS.Transform.toString(transform),
