@@ -174,3 +174,15 @@ cython_debug/
 
 .DS_Store
 
+# PM MVP: runtime SQLite (created inside ./data volume by init_db)
+data/
+
+# PM MVP: Playwright artifacts
+frontend/test-results/
+frontend/playwright-report/
+
+# PM MVP: static/ is Docker build output; keep only the empty .gitkeep so
+# FastAPI's StaticFiles(check_dir=False) has a directory to mount locally
+static/*
+!static/.gitkeep
+
