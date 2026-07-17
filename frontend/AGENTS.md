@@ -122,14 +122,25 @@ Tailwind CSS v4. Палитра из CLAUDE.md уже интегрирована
 
 ## Тесты (все проходят)
 
-- 13 unit (Vitest): 6 `KanbanBoard.test.tsx` (loading/error/add/delete/rename/revert через мок `fetch`), 5 `kanban.test.ts` (moveCard 3 сценария + findCardLocation 2), 2 `login/page.test.tsx`
-- 8 e2e (Playwright): `auth.spec.ts` (4), `kanban.spec.ts` (4: загрузка, add+persist+cleanup, rename+persist+restore, move+persist+cleanup)
+- 21 unit (Vitest): 6 `KanbanBoard.test.tsx`, 5 `kanban.test.ts`, 2 `login/page.test.tsx`, 8 `ChatSidebar.test.tsx` (load history, send + POST /api/chat, loading placeholder, refetch board on actions, 502 error, clear-with-confirm, cancel-confirm, collapse/expand)
+- 11 e2e (Playwright, viewport 1600×900): `auth.spec.ts` (4), `kanban.spec.ts` (4), `chat.spec.ts` (3: send-with-mock creates real card via board API + refresh, collapse/expand, clear-with-confirm)
 - Vitest: jsdom, globals, coverage (text + html)
 - Playwright: против собранного контейнера (`PLAYWRIGHT_BASE_URL=http://localhost:8000` через `--network host` в контейнере с playwright); при отсутствии переменной запускается локальный `npm run dev`
 
+## Чат с ИИ (Часть 10)
+
+- `src/components/ChatSidebar.tsx` — sticky flex-sibling панель справа (`w-[380px]`, `sticky top-0 h-screen shrink-0`), коллапсируемая до `w-12` (кнопка `‹` для развернуть). Открыта по умолчанию. Живёт внутри [KanbanBoard.tsx](src/components/KanbanBoard.tsx) как sibling `<main>`.
+- Пропс `onBoardChanged: () => void` — вызывается после ответа ИИ, если `response.actions.length > 0`. `KanbanBoard` реализует `refetchBoard` через `api.getBoard()`.
+- `useEffect` при монтировании подтягивает `GET /api/chat/history`, автопрокрутка вниз в `useEffect([messages.length, isSending])`.
+- Отображение actions в assistant-сообщении: под текстом `reply` — `<ul>` серым курсивом. Форматы: `Создал карточку «<title>»`, `Отредактировал карточку #<id>`, `Переместил карточку #<id> в колонку #<id>, позиция N`, `Удалил карточку #<id>`, `Переименовал колонку #<id> → «<title>»`.
+- Loading: пока идёт запрос — плашка "ИИ думает…" в конце списка + кнопка `Отправить` disabled.
+- Ошибка 502: плашка `role="alert"` над input; сообщение пользователя НЕ добавляется в чат (backend его не сохранил), но остаётся в textarea для retry.
+- Кнопка `Очистить` в шапке: `window.confirm("Очистить историю чата?")` → `DELETE /api/chat/history` → локально `messages=[]`.
+- Enter отправляет; Shift+Enter — перенос строки.
+
 ## Что отсутствует (будет добавлено)
 
-- Компонент `ChatSidebar` для чата с ИИ (Часть 10)
+- Ничего критического для MVP. Возможные расширения: resolve id→title в actions display, keyboard shortcut для сворачивания панели, стриминг ответов ИИ.
 
 ## Аутентификация (Часть 4)
 
@@ -143,7 +154,7 @@ Tailwind CSS v4. Палитра из CLAUDE.md уже интегрирована
 
 - `next.config.ts`: `output: "export"`, `trailingSlash: true`, `images: { unoptimized: true }`
 - `npm run build` создаёт `frontend/out/`; в Docker Stage 1 (`node:20-slim`) артефакт копируется в `/app/static/`, откуда FastAPI обслуживает его по `/`
-- `playwright.config.ts` поддерживает `PLAYWRIGHT_BASE_URL` (например, `http://host.docker.internal:8000`) для запуска e2e против собранного контейнера; при отсутствии переменной запускается локальный `npm run dev`
+- `playwright.config.ts` поддерживает `PLAYWRIGHT_BASE_URL` (например, `http://host.docker.internal:8000`) для запуска e2e против собранного контейнера; при отсутствии переменной запускается локальный `npm run dev`. Viewport 1600×900 — нужен, чтобы ChatSidebar (380px sticky) не сжимал 5 колонок доски до перекрытия карточек
 
 ## Точки расширения
 

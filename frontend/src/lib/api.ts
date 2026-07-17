@@ -2,6 +2,34 @@ import type { BoardData, Card, Column } from "@/lib/kanban";
 
 export type SessionStatus = { authenticated: boolean };
 
+export type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+};
+
+export type BoardAction =
+  | { type: "create_card"; column_id: string; title: string; details: string }
+  | {
+      type: "edit_card";
+      card_id: string;
+      title: string | null;
+      details: string | null;
+    }
+  | {
+      type: "move_card";
+      card_id: string;
+      column_id: string;
+      position: number;
+    }
+  | { type: "delete_card"; card_id: string }
+  | { type: "rename_column"; column_id: string; title: string };
+
+export type AiResponse = {
+  reply: string;
+  actions: BoardAction[];
+};
+
 async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   return fetch(path, {
     ...init,
@@ -86,5 +114,23 @@ export const api = {
       body: JSON.stringify({ column_id: Number(columnId), position }),
     });
     if (!res.ok) throw new Error(`PATCH card ${cardId} position failed: ${res.status}`);
+  },
+
+  async getChatHistory(): Promise<ChatMessage[]> {
+    const res = await apiFetch("/api/chat/history");
+    return jsonOrThrow<ChatMessage[]>(res, "GET /api/chat/history");
+  },
+  async sendChatMessage(message: string): Promise<AiResponse> {
+    const res = await apiFetch("/api/chat", {
+      method: "POST",
+      body: JSON.stringify({ message }),
+    });
+    return jsonOrThrow<AiResponse>(res, "POST /api/chat");
+  },
+  async clearChatHistory(): Promise<void> {
+    const res = await apiFetch("/api/chat/history", { method: "DELETE" });
+    if (!res.ok) {
+      throw new Error(`DELETE /api/chat/history failed: ${res.status}`);
+    }
   },
 };

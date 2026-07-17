@@ -65,6 +65,7 @@ let fetchMock: ReturnType<typeof installFetchMock>;
 beforeEach(() => {
   fetchMock = installFetchMock();
   fetchMock.on("GET", "/api/board", () => ({ status: 200, body: mockBoard() }));
+  fetchMock.on("GET", "/api/chat/history", () => ({ status: 200, body: [] }));
 });
 
 afterEach(() => {

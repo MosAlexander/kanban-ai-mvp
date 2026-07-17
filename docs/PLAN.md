@@ -273,17 +273,17 @@
 **Цель:** красивый чат-виджет в правой боковой панели; полноценный чат с ИИ; при действиях ИИ доска в UI обновляется автоматически.
 
 **Подэтапы:**
-- [ ] Компонент `ChatSidebar` (`src/components/ChatSidebar.tsx`) — фиксированная правая панель, коллапсируемая
-- [ ] Дизайн по палитре CLAUDE.md (`--primary-blue` для акцентов, `--secondary-purple` для кнопки отправки, `--navy-dark` для заголовка)
-- [ ] Список сообщений (user/assistant), автопрокрутка вниз при новом сообщении
-- [ ] Поле ввода + кнопка "Отправить" (disabled во время запроса)
-- [ ] Loading state ("ИИ думает…")
-- [ ] Загрузка истории при монтировании (`GET /api/chat/history`)
-- [ ] После ответа: если `actions` не пусты -> `refetch` board (`GET /api/board`) -> UI обновляется
-- [ ] В сообщении ассистента показать краткое описание действий (например, "Создал карту 'X' в колонке 'Backlog'")
-- [ ] Кнопка "Очистить историю" (`DELETE /api/chat/history`)
-- [ ] Unit-тесты компонента (отправка, отображение, loading, refetch board)
-- [ ] E2E: пользователь пишет "создай карту 'Тест' в Backlog" -> карта появляется на доске без ручной перезагрузки
+- [x] Компонент `ChatSidebar` (`src/components/ChatSidebar.tsx`) — sticky flex-sibling правая панель, коллапсируемая до 48px
+- [x] Дизайн по палитре CLAUDE.md (`--primary-blue` для user-сообщений, `--secondary-purple` для кнопки отправки, `--navy-dark` для заголовка)
+- [x] Список сообщений (user/assistant), автопрокрутка вниз при новом сообщении
+- [x] Поле ввода + кнопка "Отправить" (disabled во время запроса)
+- [x] Loading state ("ИИ думает…")
+- [x] Загрузка истории при монтировании (`GET /api/chat/history`)
+- [x] После ответа: если `actions` не пусты -> `refetch` board (`GET /api/board`) -> UI обновляется
+- [x] В сообщении ассистента показать краткое описание действий (краткий формат `Создал карточку «...»`, `Отредактировал карточку #ID` и т.д.)
+- [x] Кнопка "Очистить историю" (`DELETE /api/chat/history`) с `window.confirm`
+- [x] Unit-тесты компонента (8 тестов Vitest: load history, send + POST, loading placeholder, refetch board on actions, 502 error, clear-with-confirm, cancel-confirm, collapse/expand)
+- [x] E2E: пользователь пишет сообщение -> карта появляется на доске без ручной перезагрузки (Playwright route mock + real board API forwarding)
 
 **Тесты:**
 - Unit: `ChatSidebar` рендерит историю, обрабатывает отправку, показывает loading
