@@ -217,12 +217,12 @@
 **Цель:** разрешить бэкенду делать прямой вызов OpenAI. Проверка простым тестом "2+2".
 
 **Подэтапы:**
-- [ ] Добавить `openai` в `backend/pyproject.toml`
-- [ ] Читать `OPENAI_API_KEY` из `.env` через `pydantic-settings`
-- [ ] `backend/app/ai.py` — функция `call_openai(prompt: str) -> str`, использующая модель `openai/gpt-5-mini`
-- [ ] Endpoint `POST /api/ai/ping` — принимает `{prompt: str}`, возвращает `{answer: str}`; защищён `current_user`
-- [ ] pytest с моком OpenAI (`unittest.mock`) — проверить корректность запроса (модель, формат)
-- [ ] pytest живой (`@pytest.mark.live`, включается флагом `--live`) — `POST /api/ai/ping` с "Сколько будет 2+2?" -> в ответе содержится "4"
+- [x] Добавить `openai` в `backend/pyproject.toml`
+- [x] Читать `OPENAI_API_KEY` из `.env` через `pydantic-settings`
+- [x] `backend/app/ai.py` — функция `call_openai(prompt: str) -> str`, использующая модель `openai/gpt-5-mini`
+- [x] Endpoint `POST /api/ai/ping` — принимает `{prompt: str}`, возвращает `{answer: str}`; защищён `current_user`
+- [x] pytest с моком OpenAI (`unittest.mock`) — проверить корректность запроса (модель, формат)
+- [x] pytest живой (`@pytest.mark.live`, включается флагом `--live`) — `POST /api/ai/ping` с "Сколько будет 2+2?" -> в ответе содержится "4"
 
 **Тесты:**
 - Unit (mocked): правильно формируется запрос к OpenAI, модель = `gpt-5-mini`

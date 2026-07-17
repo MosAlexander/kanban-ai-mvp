@@ -17,9 +17,11 @@
 - `app/auth.py` — dependency `current_user(request) -> int | 401`
 - `app/models.py` — SQLModel-таблицы: `User`, `Board`, `Column`, `Card`, `ChatMessage`
 - `app/db.py` — async engine, `async_session_maker`, `get_session` dep, `seed_board`, `init_db`
+- `app/ai.py` — ленивый `AsyncOpenAI` клиент, `call_openai(prompt) -> str` (30s timeout, префикс `openai/` в `settings.model` срезается)
 - `app/routers/session.py` — GET/POST/DELETE `/api/session`
 - `app/routers/board.py` — все CRUD-роуты доски
-- `tests/conftest.py` — autouse fixture `isolate_db` (tmp SQLite для каждого теста), `client`, `auth_client`
+- `app/routers/ai.py` — POST `/api/ai/ping`
+- `tests/conftest.py` — autouse fixture `isolate_db` (tmp SQLite для каждого теста), `client`, `auth_client`, регистрация опции `--live`
 - `tests/` — pytest-тесты
 
 ## Endpoints
@@ -37,6 +39,8 @@
   - `PATCH /api/board/cards/{card_id}` `{title?, details?}` -> обновлённая `CardOut`
   - `DELETE /api/board/cards/{card_id}` -> 204
   - `PATCH /api/board/cards/{card_id}/position` `{column_id, position}` -> 204. `position` — 0-based индекс в целевой колонке. Позиции целевой колонки перенумеровываются шагом 1000.
+- **ИИ (Часть 8, требуют cookie-сессии):**
+  - `POST /api/ai/ping` `{prompt}` -> `{answer}`. Прямой вызов OpenAI (`gpt-5-mini`). Ошибки OpenAI (auth/rate limit/timeout/api) -> 502 `AI service error`. Пустой ответ модели -> 502 `Empty AI response`.
 
 ## БД и seed
 
@@ -62,7 +66,9 @@ uv run uvicorn app.main:app --reload
 
 ## Тесты
 
-Внутри контейнера: `docker compose exec pm uv run --no-sync pytest -v` (34 теста).
+Внутри контейнера: `docker compose exec pm uv run --no-sync pytest -v` (40 тестов + 1 live-тест, пропускается без `--live`).
+
+Live-тест OpenAI: `docker compose exec pm uv run --no-sync pytest -v --live -k live`. Требует валидный `OPENAI_API_KEY` в `.env`.
 
 ## Запуск локально (без Docker)
 

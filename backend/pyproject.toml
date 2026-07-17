@@ -10,6 +10,7 @@ dependencies = [
     "itsdangerous>=2.2.0",
     "sqlmodel>=0.0.22",
     "aiosqlite>=0.20.0",
+    "openai>=1.60.0",
 ]
 
 [dependency-groups]
@@ -23,3 +24,6 @@ dev = [
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "live: hits real OpenAI API (opt-in via --live)",
+]

@@ -7,6 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
 from app.db import init_db
+from app.routers.ai import router as ai_router
 from app.routers.board import router as board_router
 from app.routers.session import router as session_router
 
@@ -28,6 +29,7 @@ app.add_middleware(
 
 app.include_router(session_router)
 app.include_router(board_router)
+app.include_router(ai_router)
 
 
 @app.get("/api/health")

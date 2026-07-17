@@ -6,6 +6,24 @@ from app import db as db_module
 from app.config import settings
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--live",
+        action="store_true",
+        default=False,
+        help="run live tests that hit real external APIs",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--live"):
+        return
+    skip_live = pytest.mark.skip(reason="need --live option to run")
+    for item in items:
+        if "live" in item.keywords:
+            item.add_marker(skip_live)
+
+
 @pytest.fixture(autouse=True)
 def isolate_db(tmp_path, monkeypatch):
     db_path = tmp_path / "test.db"
